@@ -1,29 +1,24 @@
 # devx-logs
 
-A prototype tool to help forward logs of a SystemD Unit to Kinesis. The output
-is a Fluentbit config, that reads from JournalD, and filters to the specified
-SystemD Unit.
-
-Instance app/stage/stack tags are added to records. You can add additional tags
-via a tag(!): `LogTags`.
+A prototype tool to help forward logs of a Systemd Unit to Kinesis. Additional
+instance logs (cloud-init-output.log) are also included. The output is a
+[Fluentbit](https://docs.fluentbit.io/manual/) config. You should typically
+store this under `/etc/td-agent-bit/td-agent-bit.conf` if using Ubuntu.
 
 Use the `-h` flag for more info.
 
-By default, devx-logs ships the following:
+```
+devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.
 
-* /var/log/cloud-init-output.log
-* the specified systemd unit(s)
-* ~memory statistics (see
-  [here](https://docs.fluentbit.io/manual/pipeline/inputs/memory-metrics) for
-  details)~
-* it's own journald logs(!) and also fluentbit's logs
+Usage:
+  devx-logs [flags]
 
-## Instace Metadata Service Version 2 (IMDSV2)
-
-`devx-logs` requires instances to be running v2 of the Instance Metadata Service
-with tags enabled. To enable this set MetadataOptions in your Launch Template:
-
-https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-launchtemplate-launchtemplatedata.html#cfn-ec2-launchtemplate-launchtemplatedata-metadataoptions
+Flags:
+  -h, --help                       help for devx-logs
+      --kinesisStreamName string   Set to a Kinesis log stream name. Your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.
+      --systemdUnit string         Set to the name of your app's systemd service. I.e. 'name' from [name].service
+      --tags string                Set a comma-separated list of Key=Value pairs, to be included on log records. At the least, this should include App, Stack, and Stage. Eg. 'App=foo,Stage=PROD,Stack=bar'.
+```
 
 
 
