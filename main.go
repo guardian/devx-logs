@@ -25,6 +25,12 @@ func main() {
 	}
 }
 
+type Config struct {
+	SystemdUnits           []string
+	KinesisStreamName      string
+	IncludeCloudInitOutput bool
+}
+
 func RootCmd(metadataURL string) *cobra.Command {
 	var logStreamARN string
 	var systemdUnit string
@@ -35,15 +41,22 @@ func RootCmd(metadataURL string) *cobra.Command {
 		Long:  `devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			tags, err := getTags(metadataURL)
-			warn(err, "Unable to read tags")
+			check(err, "Unable to read tags")
+
+			config, err := getConfigFromTags(tags)
+
+			// question, do I need to output multiple files?
+			// probably yes! easier
+			// but then, implies specifying a target output directory
+			// or running the program multiple times?
 
 			placeholders := map[string]string{
-				"KINESIS_STREAM": logStreamARN,
+				"KINESIS_STREAM": config.KinesisStreamName,
 				"SYSTEMD_UNIT":   systemdUnit,
 			}
 
-			config := replaceReplaceholders(rawConfig, placeholders, tags)
-			cmd.Print(config)
+			fluentbitConfig := replaceReplaceholders(rawConfig, placeholders, tags)
+			cmd.Print(fluentbitConfig)
 		},
 	}
 
@@ -54,6 +67,41 @@ func RootCmd(metadataURL string) *cobra.Command {
 	rootCmd.MarkFlagRequired("systemdUnit")
 
 	return rootCmd
+}
+
+func getTag(tags map[string]string, key string) (string, error) {
+	value, ok := tags[key]
+	if !ok {
+		return value, fmt.Errorf("unable to find required tag: %s", key)
+	}
+
+	return value, nil
+}
+
+func getConfigFromTags(tags map[string]string) (Config, error) {
+	app := tags["App"]
+	systemdUnitsTagValue := tags["LogSystemdUnits"]
+	if app == "" && systemdUnitsTagValue == "" {
+		return Config{}, fmt.Errorf("both App and LogSystemdUnits not found; at least one must be on the instance.")
+	}
+
+	var systemdUnits []string
+	if systemdUnitsTagValue != "" {
+		systemdUnits = strings.Split(systemdUnitsTagValue, ",")
+	} else {
+		systemdUnits = []string{app}
+	}
+
+	kinesisStreamName, err := getTag(tags, "LogKinesisStreamName")
+	if err != nil {
+		return Config{}, err
+	}
+
+	return Config{
+		SystemdUnits:           systemdUnits,
+		KinesisStreamName:      kinesisStreamName,
+		IncludeCloudInitOutput: tags["LogIncludeCloudInitOutput"] != "false",
+	}, nil
 }
 
 func getTags(metadataURL string) (map[string]string, error) {
@@ -126,8 +174,9 @@ func replaceReplaceholders(config string, info map[string]string, tags map[strin
 	return updated
 }
 
-func warn(err error, msg string) {
+func check(err error, msg string) {
 	if err != nil {
 		fmt.Printf("%s: %v\n", msg, err)
+		os.Exit(1)
 	}
 }
