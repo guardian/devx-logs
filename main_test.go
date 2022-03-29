@@ -13,7 +13,7 @@ func TestRootCmd(t *testing.T) {
 
 	got := bytes.Buffer{}
 	cmd.SetOut(&got)
-	cmd.SetArgs([]string{"--kinesisStreamName", "foo", "--systemdUnit", "bar", "--tags", "App=bar,Stack=test,Stage=CODE"})
+	cmd.SetArgs([]string{"--kinesisStreamName", "foo", "--tags", "App=bar,Stack=test,Stage=CODE"})
 
 	err := cmd.Execute()
 	if err != nil {

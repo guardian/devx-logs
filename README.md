@@ -14,14 +14,15 @@ Use the `-h` flag for more info.
 ```
 devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.
 
+Configuration is typically provided by tags on the instance, but flags are also supported to customise behaviour.
+
 Usage:
   devx-logs [flags]
 
 Flags:
   -h, --help                       help for devx-logs
-      --kinesisStreamName string   Set to a Kinesis log stream name. Your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.
-      --systemdUnit string         Set to the name of your app's systemd service. I.e. 'name' from [name].service
-      --tags string                Set a comma-separated list of Key=Value pairs, to be included on log records. At the least, this should include App, Stack, and Stage. Eg. 'App=foo,Stage=PROD,Stack=bar'. If empty, tags will be sourced from /etc/config/tags.json (see the cdk-base Amigo role).
+      --kinesisStreamName string   Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.
+      --tags string                Typically read from /etc/config/tags.json (see Amigo's cdk-base role here for more info), but you can override using this flag. Pass a comma-separated list of Key=Value pairs, to be included on log records.
 ```
 
 
