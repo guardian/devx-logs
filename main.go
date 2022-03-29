@@ -2,107 +2,85 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
 
-//go:embed fluentbit.conf
-var rawConfig string
+//go:embed fluentbit/fluentbit.conf
+var fluentbitConfig string
+
+const jsonConfigPath = "/etc/config/tags.json"
 
 func main() {
-	ec2MetaURL := "http://169.254.169.254"
-	rootCmd := RootCmd(ec2MetaURL)
+	rootCmd := RootCmd()
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func RootCmd(metadataURL string) *cobra.Command {
-	var logStreamARN string
+func RootCmd() *cobra.Command {
+	var kinesisStreamName string
 	var systemdUnit string
+	var tagsArg string
 
 	var rootCmd = &cobra.Command{
 		Use:   "devx-logs",
 		Short: "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.",
 		Long:  `devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			tags, err := getTags(metadataURL)
-			warn(err, "Unable to read tags")
+			tags, err := getTags(jsonConfigPath, tagsArg)
+			check(err, "tags not found")
 
 			placeholders := map[string]string{
-				"KINESIS_STREAM": logStreamARN,
+				"KINESIS_STREAM": kinesisStreamName,
 				"SYSTEMD_UNIT":   systemdUnit,
 			}
 
-			config := replaceReplaceholders(rawConfig, placeholders, tags)
-			cmd.Print(config)
+			fluentbitConfig := replaceReplaceholders(fluentbitConfig, placeholders, tags)
+			cmd.Print(fluentbitConfig)
 		},
 	}
 
-	rootCmd.Flags().StringVar(&logStreamARN, "logStreamARN", "", "Set to a Kinesis log stream ARN. Your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
-	rootCmd.MarkFlagRequired("logStreamARN")
+	rootCmd.Flags().StringVar(&kinesisStreamName, "kinesisStreamName", "", "Set to a Kinesis log stream name. Your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
+	rootCmd.MarkFlagRequired("kinesisStreamName")
 
-	rootCmd.Flags().StringVar(&systemdUnit, "systemdUnit", "", "Set to a SystemD Unit. Used to filter JournalD records.")
-	rootCmd.MarkFlagRequired("systemdUnit")
+	rootCmd.Flags().StringVar(&systemdUnit, "systemdUnit", "", "Set to the name of your app's systemd service. I.e. 'name' from [name].service")
+	rootCmd.MarkFlagRequired("systemdUnits")
+
+	rootCmd.Flags().StringVar(&tagsArg, "tags", "", "Set a comma-separated list of Key=Value pairs, to be included on log records. At the least, this should include App, Stack, and Stage. Eg. 'App=foo,Stage=PROD,Stack=bar'. If empty, tags will be sourced from /etc/config/tags.json (see the cdk-base Amigo role).")
 
 	return rootCmd
 }
 
-func getTags(metadataURL string) (map[string]string, error) {
+func getTags(jsonConfigPath string, tagsArg string) (map[string]string, error) {
 	tags := map[string]string{}
 
-	client := http.DefaultClient
-	client.Timeout = time.Second * 2
-
-	token, err := getMetadataToken(client, metadataURL)
-	if err != nil {
-		return tags, err
-	}
-
-	tagData, err := getMetadata(client, metadataURL+"/latest/meta-data/tags/instance", token)
-	tagNames := strings.Split(strings.TrimSpace(string(tagData)), "\n")
-
-	for _, name := range tagNames {
-		value, err := getMetadata(client, fmt.Sprintf("%s/latest/meta-data/tags/instance/%s", metadataURL, name), token)
+	if tagsArg == "" { // lookup from config file
+		raw, err := os.ReadFile(jsonConfigPath)
 		if err != nil {
-			return tags, err
+			return tags, fmt.Errorf("unable to read tags from %s: %w", jsonConfigPath, err)
 		}
 
-		tags[name] = strings.TrimSpace(string(value))
+		err = json.Unmarshal(raw, &tags)
+		if err != nil {
+			return tags, fmt.Errorf("unable to unmarshal JSON config from %s: %w", jsonConfigPath, err)
+		}
+
+		return tags, nil
 	}
 
-	return tags, err
-}
-
-func getMetadataToken(client *http.Client, baseURL string) (string, error) {
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/latest/api/token", baseURL), nil)
-	req.Header.Add("X-aws-ec2-metadata-token-ttl-seconds", "60")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
+	for _, tag := range strings.Split(tagsArg, ",") {
+		kv := strings.Split(tag, "=")
+		tags[kv[0]] = kv[1]
 	}
-	defer resp.Body.Close()
 
-	token, err := io.ReadAll(resp.Body)
-	return string(token), err
-}
-
-func getMetadata(client *http.Client, URL string, token string) ([]byte, error) {
-	resp, err := client.Get(URL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	return io.ReadAll(resp.Body)
+	return tags, nil
 }
 
 func replaceReplaceholders(config string, info map[string]string, tags map[string]string) string {
@@ -121,13 +99,14 @@ func replaceReplaceholders(config string, info map[string]string, tags map[strin
 	// here (partly for tests).
 	sort.StringSlice(addTags).Sort()
 
-	updated = strings.ReplaceAll(updated, "{{TAGS}}", strings.Join(addTags, "\n  "))
+	updated = strings.ReplaceAll(updated, "{{TAGS}}", strings.Join(addTags, "\n    "))
 
 	return updated
 }
 
-func warn(err error, msg string) {
+func check(err error, msg string) {
 	if err != nil {
 		fmt.Printf("%s: %v\n", msg, err)
+		os.Exit(1)
 	}
 }
