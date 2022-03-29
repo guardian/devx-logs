@@ -25,7 +25,7 @@ func main() {
 }
 
 func RootCmd() *cobra.Command {
-	var kinesisStreamName string
+	var kinesisStreamNameArg string
 	var tagsArg string
 
 	var rootCmd = &cobra.Command{
@@ -36,13 +36,16 @@ func RootCmd() *cobra.Command {
 			tags, err := getTags(jsonConfigPath, tagsArg)
 			check(err, "tags not found")
 
+			kinesisStreamName, err := getKinesisStreamName(tags, kinesisStreamNameArg)
+			check(err, "kinesis stream name not found")
+
 			placeholders := map[string]string{"KINESIS_STREAM": kinesisStreamName}
 			fluentbitConfig := replaceReplaceholders(fluentbitConfig, placeholders, tags)
 			cmd.Print(fluentbitConfig)
 		},
 	}
 
-	rootCmd.Flags().StringVar(&kinesisStreamName, "kinesisStreamName", "", "Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
+	rootCmd.Flags().StringVar(&kinesisStreamNameArg, "kinesisStreamName", "", "Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
 	rootCmd.Flags().StringVar(&tagsArg, "tags", "", "Typically read from /etc/config/tags.json (see Amigo's cdk-base role here for more info), but you can override using this flag. Pass a comma-separated list of Key=Value pairs, to be included on log records.")
 
 	return rootCmd
