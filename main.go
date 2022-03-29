@@ -43,8 +43,6 @@ func RootCmd() *cobra.Command {
 	}
 
 	rootCmd.Flags().StringVar(&kinesisStreamName, "kinesisStreamName", "", "Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
-	rootCmd.MarkFlagRequired("kinesisStreamName")
-
 	rootCmd.Flags().StringVar(&tagsArg, "tags", "", "Typically read from /etc/config/tags.json (see Amigo's cdk-base role here for more info), but you can override using this flag. Pass a comma-separated list of Key=Value pairs, to be included on log records.")
 
 	return rootCmd
