@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  BINARY_NAME: devx-logs-linux-arm64
+  BINARY_NAME: devx-logs-linux
 
 on:
   push:
@@ -21,8 +21,9 @@ jobs:
     - name: Run tests
       run: go test .
     - name: Build
-      run: GOOS=linux GOARCH=arm64 go build -o $BINARY_NAME main.go      
+      run: |
+        GOOS=linux GOARCH=arm64 go build -o $BINARY_NAME-arm64 main.go      
+        GOOS=linux GOARCH=amd64 go build -o $BINARY_NAME-amd64 main.go
     - uses: actions/upload-artifact@v2
       with:
-        name: ${{ env.BINARY_NAME }}
-        path: ${{ env.BINARY_NAME }}
+        path: ${{ env.BINARY_NAME }}-*
