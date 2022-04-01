@@ -15,6 +15,7 @@ import (
 var fluentbitConfig string
 
 const jsonConfigPath = "/etc/config/tags.json"
+const fluentbitConfigPath = "/etc/td-agent-bit/td-agent-bit.conf"
 
 func main() {
 	rootCmd := RootCmd()
@@ -27,6 +28,7 @@ func main() {
 func RootCmd() *cobra.Command {
 	var kinesisStreamNameArg string
 	var tagsArg string
+	var dryRun bool
 
 	var rootCmd = &cobra.Command{
 		Use:   "devx-logs",
@@ -41,12 +43,20 @@ func RootCmd() *cobra.Command {
 
 			placeholders := map[string]string{"KINESIS_STREAM": kinesisStreamName}
 			fluentbitConfig := replaceReplaceholders(fluentbitConfig, placeholders, tags)
-			cmd.Print(fluentbitConfig)
+
+			if dryRun {
+				cmd.Print(fluentbitConfig)
+				return
+			}
+
+			err = os.WriteFile(fluentbitConfigPath, []byte(fluentbitConfig), 0644)
+			check(err, fmt.Sprintf("unable to write config file to %s: %v", fluentbitConfigPath, err))
 		},
 	}
 
 	rootCmd.Flags().StringVar(&kinesisStreamNameArg, "kinesisStreamName", "", "Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
 	rootCmd.Flags().StringVar(&tagsArg, "tags", "", "Typically read from /etc/config/tags.json (see Amigo's cdk-base role here for more info), but you can override using this flag. Pass a comma-separated list of Key=Value pairs, to be included on log records.")
+	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Set to true to print config to stdout rather than write to file.")
 
 	return rootCmd
 }
