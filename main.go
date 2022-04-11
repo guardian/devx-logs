@@ -88,21 +88,27 @@ func getTags(jsonConfigPath string, tagsArg string) (map[string]string, error) {
 			return tags, fmt.Errorf("unable to unmarshal JSON config from %s: %w", jsonConfigPath, err)
 		}
 
-		return tags, nil
+		return normaliseTags(tags), nil
 	}
 
 	for _, tag := range strings.Split(tagsArg, ",") {
 		kv := strings.Split(tag, "=")
 
-		// Follow ELK casing conventions for key tags
-		if kv[0] == "App" || kv[0] == "Stage" || kv[0] == "Stack" {
-			kv[0] = strings.ToLower(kv[0])
-		}
-
 		tags[kv[0]] = kv[1]
 	}
 
 	return tags, nil
+}
+
+func normaliseTags(tags map[string]string) map[string]string {
+	for tag, value := range tags {
+		if tag == "App" || tag == "Stage" || tag == "Stack" {
+			tags[strings.ToLower(tag)] = value
+			delete(tags, tag)
+		}
+	}
+
+	return tags
 }
 
 func replaceReplaceholders(config string, info map[string]string, tags map[string]string) string {
