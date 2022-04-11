@@ -5,6 +5,8 @@ is a [Fluentbit](https://docs.fluentbit.io/manual/) config written to
 `/etc/td-agent-bit/td-agent-bit.conf`. Use the `dry-run` flag to write to stdout
 instead.
 
+The `cdk-base` Amigo role uses this to provide log shipping out of the box.
+
 The following logs are supported:
 
 * [x] cloud-init
