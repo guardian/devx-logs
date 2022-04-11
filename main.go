@@ -93,6 +93,12 @@ func getTags(jsonConfigPath string, tagsArg string) (map[string]string, error) {
 
 	for _, tag := range strings.Split(tagsArg, ",") {
 		kv := strings.Split(tag, "=")
+
+		// Follow ELK casing conventions for key tags
+		if kv[0] == "App" || kv[0] == "Stage" || kv[0] == "Stack" {
+			kv[0] = strings.ToLower(kv[0])
+		}
+
 		tags[kv[0]] = kv[1]
 	}
 
