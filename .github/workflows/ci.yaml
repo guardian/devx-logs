@@ -52,7 +52,7 @@ jobs:
           app: devx-logs
           stack: deploy
           deployments: |
-            upload:
+            devx-logs:
               type: aws-s3
               sources: ${{ env.BINARY_NAME }}-arm64,${{ env.BINARY_NAME }}-amd64
               parameters:
