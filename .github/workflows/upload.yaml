@@ -8,7 +8,7 @@ on:
   workflow_run:
     workflows: [test]
     types: [completed]
-    branches: [main]
+    # branches: [main] TODO enable afterwards
 
 jobs:
   upload:
