@@ -19,7 +19,7 @@ jobs:
         run: |
           GOOS=linux GOARCH=arm64 go build -o $BINARY_NAME-arm64 main.go      
           GOOS=linux GOARCH=amd64 go build -o $BINARY_NAME-amd64 main.go
-      - uses: guardian/actions-riff-raff
+      - uses: guardian/actions-riff-raff@latest
         with:
           app: devx-logs
           stack: deploy
