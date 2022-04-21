@@ -24,11 +24,10 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     needs: [test]
-    if: github.ref == 'refs/heads/main'
 
     # See https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
-      # required by aws-actions/configure-aws-credentials
+      # required guardian/actions-riff-raff
       id-token: write
       contents: read
 
@@ -43,12 +42,9 @@ jobs:
           GOOS=linux GOARCH=arm64 go build -o $BINARY_NAME-arm64 main.go      
           GOOS=linux GOARCH=amd64 go build -o $BINARY_NAME-amd64 main.go
 
-      - uses: aws-actions/configure-aws-credentials@v1
+      - uses: guardian/actions-riff-raff@nicl/composite
         with:
           role-to-assume: ${{ secrets.GU_RIFF_RAFF_ROLE_ARN }}
-          aws-region: eu-west-1
-      - uses: guardian/actions-riff-raff@main
-        with:
           app: devx-logs
           stack: deploy
           deployments: |
