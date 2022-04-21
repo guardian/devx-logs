@@ -1,19 +1,27 @@
-name: upload
-
-env:
-  BINARY_NAME: devx-logs-linux
+name: ci
 
 on:
+  pull_request:
   workflow_dispatch:
-  workflow_run:
-    workflows: [test]
-    types: [completed]
-    # branches: [main] TODO enable afterwards
+  push:
+    branches:
+      - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.17"
+      - name: Run tests
+        run: go test .
   upload:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: [test]
+    # if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - name: Setup Go
