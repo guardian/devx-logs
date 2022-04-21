@@ -39,7 +39,6 @@ jobs:
         with:
           app: devx-logs
           stack: deploy
-          dryRun: true
           deployments: |
             upload:
               type: aws-s3
