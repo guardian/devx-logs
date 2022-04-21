@@ -29,5 +29,9 @@ Flags:
       --tags string                Typically read from /etc/config/tags.json (see Amigo's cdk-base role here for more info), but you can override using this flag. Pass a comma-separated list of Key=Value pairs, to be included on log records.
 ```
 
+# Deployment
 
+This tool is baked into images in the cdk-base role in AMIgo. In order to update
+it you should grab the built artifacts from the GitHub actions build and upload
+them to `packages/devx-logs/` in the AMIgo data bucket.
 
