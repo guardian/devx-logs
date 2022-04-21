@@ -1,5 +1,8 @@
 name: ci
 
+env:
+  BINARY_NAME: devx-logs-linux
+
 on:
   pull_request:
   workflow_dispatch:
