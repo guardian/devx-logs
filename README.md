@@ -9,8 +9,8 @@ The `cdk-base` Amigo role uses this to provide log shipping out of the box.
 
 The following logs are supported:
 
-* [x] cloud-init
-* [ ] application logs (PLANNED FOR THE NEAR FUTURE)
+- [x] cloud-init
+- [ ] application logs (PLANNED FOR THE NEAR FUTURE)
 
 Use the `-h` flag for more info.
 
@@ -31,7 +31,4 @@ Flags:
 
 # Deployment
 
-This tool is baked into images in the cdk-base role in AMIgo. In order to update
-it you should grab the built artifacts from the GitHub actions build and upload
-them to `packages/devx-logs/` in the AMIgo data bucket.
-
+This tools deploys via Riffraff whenever a PR is merged into `main`.
