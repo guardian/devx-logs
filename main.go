@@ -11,10 +11,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type FluentbitConfig struct {
+	MainConfigFile string
+	ApplicationConfigFile string
+}
+
 //go:embed fluentbit/fluentbit.conf
 var fluentbitConfig string
 
+//go:embed fluentbit/application-logs.conf
+var applicationLogsConfig string
+
 const jsonConfigPath = "/etc/config/tags.json"
+const applicationLogsConfigPath = "/etc/td-agent-bit/application-logs.conf"
 const fluentbitConfigPath = "/etc/td-agent-bit/td-agent-bit.conf"
 
 func main() {
@@ -35,22 +44,21 @@ func RootCmd() *cobra.Command {
 		Short: "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.",
 		Long:  "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.\n\nConfiguration is typically provided by tags on the instance, but flags are also supported to customise behaviour.",
 		Run: func(cmd *cobra.Command, args []string) {
-			tags, err := getTags(jsonConfigPath, tagsArg)
-			check(err, "tags not found")
 
-			kinesisStreamName, err := getKinesisStreamName(tags, kinesisStreamNameArg)
-			check(err, "kinesis stream name not found")
-
-			placeholders := map[string]string{"KINESIS_STREAM": kinesisStreamName}
-			fluentbitConfig := replaceReplaceholders(fluentbitConfig, placeholders, tags)
+			config := generateConfigs(tagsArg, kinesisStreamNameArg)
+			printableConfig := fmt.Sprintf("Main config:\n%s\nApplication config:%s", config.MainConfigFile, config.ApplicationConfigFile)
 
 			if dryRun {
-				cmd.Print(fluentbitConfig)
+				cmd.Print(printableConfig)
 				return
 			}
 
-			err = os.WriteFile(fluentbitConfigPath, []byte(fluentbitConfig), 0644)
+			err := os.WriteFile(fluentbitConfigPath, []byte(config.MainConfigFile), 0644)
 			check(err, fmt.Sprintf("unable to write config file to %s: %v", fluentbitConfigPath, err))
+
+			err = os.WriteFile(applicationLogsConfigPath, []byte(config.ApplicationConfigFile), 0644)
+			check(err, fmt.Sprintf("unable to write config file to %s: %v", applicationLogsConfigPath, err))
+
 		},
 	}
 
@@ -59,6 +67,35 @@ func RootCmd() *cobra.Command {
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Set to true to print config to stdout rather than write to file.")
 
 	return rootCmd
+}
+
+func generateConfigs(tagsArg string, kinesisStreamNameArg string) FluentbitConfig {
+	tags, err := getTags(jsonConfigPath, tagsArg)
+	check(err, "tags not found")
+
+	kinesisStreamName, err := getKinesisStreamName(tags, kinesisStreamNameArg)
+	check(err, "kinesis stream name not found")
+
+	systemdUnit, systemdUnitLookupError := getSystemdUnit(tags)
+
+	if systemdUnitLookupError != nil {
+		fmt.Printf("%s: %v\n", "Application log shipping will not be configured", systemdUnitLookupError)
+		placeholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": ""}
+		config := replaceReplaceholders(fluentbitConfig, placeholders, tags)
+		return FluentbitConfig{
+			MainConfigFile: config,
+		}
+	}
+
+	fluentbitConfigPlaceholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n"}
+	fluentbitConfig := replaceReplaceholders(fluentbitConfig, fluentbitConfigPlaceholders, tags)
+	applicationLogPlaceholders := map[string]string{"SYSTEMD_UNIT": systemdUnit}
+	applicationLogsConfig := replaceReplaceholders(applicationLogsConfig, applicationLogPlaceholders, tags)
+	return FluentbitConfig{
+		MainConfigFile: fluentbitConfig,
+		ApplicationConfigFile: applicationLogsConfig,
+	}
+
 }
 
 func getKinesisStreamName(tags map[string]string, kinesisStreamNameArg string) (string, error) {
@@ -72,6 +109,14 @@ func getKinesisStreamName(tags map[string]string, kinesisStreamNameArg string) (
 	}
 
 	return "", fmt.Errorf("Kinesis Stream name was not found: no LogKinesisStreamName tag, and the --kinesisStreamName arg was empty.")
+}
+
+func getSystemdUnit(tags map[string]string) (string, error) {
+	name, ok := tags["SystemdUnit"]
+	if ok {
+		return name, nil
+	}
+	return "", fmt.Errorf("SystemdUnit tag was not found")
 }
 
 func getTags(jsonConfigPath string, tagsArg string) (map[string]string, error) {

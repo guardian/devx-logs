@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -21,10 +22,39 @@ func TestRootCmd(t *testing.T) {
 		t.Errorf("Execute failed: %v", err)
 	}
 
-	want, _ := os.ReadFile("fluentbit/fluentbit.test.conf")
+	fluentbitConfig, _ := os.ReadFile("fluentbit/test-configs/fluentbit-cloud-init-only.test.conf")
+	want := fmt.Sprintf("Main config:\n%s\nApplication config:%s", string(fluentbitConfig), "")
 
-	if got.String() != string(want) {
-		t.Error(diff.Diff(string(want), got.String()))
+	if got.String() != want {
+		t.Error(diff.Diff(want, got.String()))
+	}
+}
+
+func TestGenerateConfigs(t *testing.T) {
+
+	cloudInitOnly, _ := os.ReadFile("fluentbit/test-configs/fluentbit-cloud-init-only.test.conf")
+	cloudInitWithInclude, _ := os.ReadFile("fluentbit/test-configs/fluentbit-cloud-init-and-app.test.conf")
+	application, _ := os.ReadFile("fluentbit/test-configs/application-logs.test.conf")
+
+	withoutApplicationLogs := FluentbitConfig { MainConfigFile: string(cloudInitOnly) }
+    withApplicationLogs := FluentbitConfig { MainConfigFile: string(cloudInitWithInclude), ApplicationConfigFile: string(application) }
+
+	var tests = []struct {
+		tagsArg string
+		want FluentbitConfig
+	}{
+		{"app=bar,stack=test,stage=CODE", withoutApplicationLogs},
+		{"app=bar,stack=test,stage=CODE,SystemdUnit=bar.service", withApplicationLogs},
+	}
+
+	for _, testCase := range tests {
+		got := generateConfigs(testCase.tagsArg, "foo")
+		if got.MainConfigFile != testCase.want.MainConfigFile {
+			t.Error(diff.Diff(got.MainConfigFile, testCase.want.MainConfigFile))
+		}
+		if got.ApplicationConfigFile != testCase.want.ApplicationConfigFile {
+			t.Error(diff.Diff(got.ApplicationConfigFile, testCase.want.ApplicationConfigFile))
+		}
 	}
 }
 
