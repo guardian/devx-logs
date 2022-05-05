@@ -36,12 +36,12 @@ func TestGenerateConfigs(t *testing.T) {
 	cloudInitWithInclude, _ := os.ReadFile("fluentbit/test-configs/fluentbit-cloud-init-and-app.test.conf")
 	application, _ := os.ReadFile("fluentbit/test-configs/application-logs.test.conf")
 
-	withoutApplicationLogs := FluentbitConfig { MainConfigFile: string(cloudInitOnly) }
-    withApplicationLogs := FluentbitConfig { MainConfigFile: string(cloudInitWithInclude), ApplicationConfigFile: string(application) }
+	withoutApplicationLogs := FluentbitConfig{MainConfigFile: string(cloudInitOnly)}
+	withApplicationLogs := FluentbitConfig{MainConfigFile: string(cloudInitWithInclude), ApplicationConfigFile: string(application)}
 
 	var tests = []struct {
 		tagsArg string
-		want FluentbitConfig
+		want    FluentbitConfig
 	}{
 		{"app=bar,stack=test,stage=CODE", withoutApplicationLogs},
 		{"app=bar,stack=test,stage=CODE,SystemdUnit=bar.service", withApplicationLogs},
@@ -49,6 +49,7 @@ func TestGenerateConfigs(t *testing.T) {
 
 	for _, testCase := range tests {
 		got := generateConfigs(testCase.tagsArg, "foo")
+
 		if got.MainConfigFile != testCase.want.MainConfigFile {
 			t.Error(diff.Diff(got.MainConfigFile, testCase.want.MainConfigFile))
 		}
