@@ -12,7 +12,7 @@ import (
 )
 
 type FluentbitConfig struct {
-	MainConfigFile string
+	MainConfigFile        string
 	ApplicationConfigFile string
 }
 
@@ -44,7 +44,6 @@ func RootCmd() *cobra.Command {
 		Short: "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.",
 		Long:  "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.\n\nConfiguration is typically provided by tags on the instance, but flags are also supported to customise behaviour.",
 		Run: func(cmd *cobra.Command, args []string) {
-
 			config := generateConfigs(tagsArg, kinesisStreamNameArg)
 			printableConfig := fmt.Sprintf("Main config:\n%s\nApplication config:%s", config.MainConfigFile, config.ApplicationConfigFile)
 
@@ -79,23 +78,33 @@ func generateConfigs(tagsArg string, kinesisStreamNameArg string) FluentbitConfi
 	systemdUnit, systemdUnitLookupError := getSystemdUnit(tags)
 
 	if systemdUnitLookupError != nil {
-		fmt.Printf("%s: %v\n", "Application log shipping will not be configured", systemdUnitLookupError)
-		placeholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": ""}
-		config := replaceReplaceholders(fluentbitConfig, placeholders, tags)
-		return FluentbitConfig{
-			MainConfigFile: config,
-		}
+		fmt.Printf("Unable to retrieve systemd unit from tags: %s\n", systemdUnitLookupError)
+		fmt.Printf("Application log shipping will not be configured.\n")
+		return cloudInitOnlyConfig(kinesisStreamName, tags)
 	}
 
+	return allLogsConfig(kinesisStreamName, systemdUnit, tags)
+}
+
+func cloudInitOnlyConfig(kinesisStreamName string, tags map[string]string) FluentbitConfig {
+	placeholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": ""}
+	config := replaceReplaceholders(fluentbitConfig, placeholders, tags)
+
+	return FluentbitConfig{
+		MainConfigFile: config,
+	}
+}
+
+func allLogsConfig(kinesisStreamName string, systemdUnit string, tags map[string]string) FluentbitConfig {
 	fluentbitConfigPlaceholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n"}
 	fluentbitConfig := replaceReplaceholders(fluentbitConfig, fluentbitConfigPlaceholders, tags)
 	applicationLogPlaceholders := map[string]string{"SYSTEMD_UNIT": systemdUnit}
 	applicationLogsConfig := replaceReplaceholders(applicationLogsConfig, applicationLogPlaceholders, tags)
+
 	return FluentbitConfig{
-		MainConfigFile: fluentbitConfig,
+		MainConfigFile:        fluentbitConfig,
 		ApplicationConfigFile: applicationLogsConfig,
 	}
-
 }
 
 func getKinesisStreamName(tags map[string]string, kinesisStreamNameArg string) (string, error) {
