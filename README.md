@@ -10,7 +10,7 @@ The `cdk-base` Amigo role uses this to provide log shipping out of the box.
 The following logs are supported:
 
 - [x] cloud-init
-- [ ] application logs (PLANNED FOR THE NEAR FUTURE)
+- [ ] application logs (currently being beta tested with DevX applications - we hope to add full support for this soon!)
 
 Use the `-h` flag for more info.
 
