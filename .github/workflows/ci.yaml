@@ -46,7 +46,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.GU_RIFF_RAFF_ROLE_ARN }}
           aws-region: eu-west-1
-      - uses: guardian/actions-riff-raff@b1e174da16d4dd15c104c48c27044c9732e76368
+      - uses: guardian/actions-riff-raff@e9d538e50c7630930ac2eded908036051a4a825a
         with:
           app: devx-logs
           config: |
