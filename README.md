@@ -1,6 +1,6 @@
 # devx-logs
 
-A prototype tool to help forward logs of a Systemd Unit to Kinesis. The output
+A tool to help forward logs of a Systemd Unit to Kinesis. The output
 is a [Fluentbit](https://docs.fluentbit.io/manual/) config written to
 `/etc/td-agent-bit/td-agent-bit.conf`. Use the `dry-run` flag to write to stdout
 instead.
@@ -9,8 +9,8 @@ The `cdk-base` Amigo role uses this to provide log shipping out of the box.
 
 The following logs are supported:
 
-- [x] cloud-init
-- [ ] application logs (currently being beta tested with DevX applications - we hope to add full support for this soon!)
+* [`cloud-init-output.log`](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts)
+* application logs
 
 Use the `-h` flag for more info.
 
