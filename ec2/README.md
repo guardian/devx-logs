@@ -1,4 +1,4 @@
-# devx-logs
+# devx-logs (for EC2)
 
 A tool to help forward logs of a Systemd Unit to Kinesis. The output
 is a [Fluentbit](https://docs.fluentbit.io/manual/) config written to
@@ -31,4 +31,4 @@ Flags:
 
 # Deployment
 
-This tools deploys via Riffraff whenever a PR is merged into `main`.
+This tools deploys via Riff-Raff whenever a PR is merged into `main`.
