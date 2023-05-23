@@ -14,9 +14,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: "1.17"
       - name: Run tests
@@ -32,9 +32,9 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: "1.17"
       - name: Build
@@ -42,13 +42,17 @@ jobs:
           GOOS=linux GOARCH=arm64 go build -o $BINARY_NAME-arm64 main.go
           GOOS=linux GOARCH=amd64 go build -o $BINARY_NAME-amd64 main.go
 
-      - uses: aws-actions/configure-aws-credentials@v1
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.GU_RIFF_RAFF_ROLE_ARN }}
           aws-region: eu-west-1
-      - uses: guardian/actions-riff-raff@v1
+      - uses: guardian/actions-riff-raff@v2
         with:
           app: devx-logs
+          contentDirectories: |
+            devx-logs:
+              - ${{ env.BINARY_NAME }}-arm64
+              - ${{ env.BINARY_NAME }}-amd64
           config: |
             stacks:
               - deploy
@@ -60,9 +64,6 @@ jobs:
             deployments:
               devx-logs:
                 type: aws-s3
-                sources:
-                  - ${{ env.BINARY_NAME }}-arm64
-                  - ${{ env.BINARY_NAME }}-amd64
                 parameters:
                   bucket: amigo-data
                   cacheControl: private
