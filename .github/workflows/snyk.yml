@@ -13,5 +13,6 @@ jobs:
       ORG: guardian-devtools
       SKIP_NODE: true
       SKIP_GO: false
+      GO_VERSION_FILE: ec2/go.mod
     secrets:
        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
