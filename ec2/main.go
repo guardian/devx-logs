@@ -22,6 +22,9 @@ var fluentbitConfig string
 //go:embed fluentbit/application-logs.conf
 var applicationLogsConfig string
 
+//go:embed fluentbit/application-only-logs.conf
+var applicationOnlyLogsConfig string
+
 const jsonConfigPath = "/etc/config/tags.json"
 const applicationLogsConfigPath = "/etc/td-agent-bit/application-logs.conf"
 const fluentbitConfigPath = "/etc/td-agent-bit/td-agent-bit.conf"
@@ -38,16 +41,17 @@ func RootCmd() *cobra.Command {
 	var kinesisStreamNameArg string
 	var tagsArg string
 	var dryRun bool
+	var disableCloudInitLogs bool
 
 	var rootCmd = &cobra.Command{
 		Use:   "devx-logs",
 		Short: "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.",
 		Long:  "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.\n\nConfiguration is typically provided by tags on the instance, but flags are also supported to customise behaviour.",
 		Run: func(cmd *cobra.Command, args []string) {
-			config := generateConfigs(tagsArg, kinesisStreamNameArg)
-			printableConfig := fmt.Sprintf("Main config:\n%s\nApplication config:%s", config.MainConfigFile, config.ApplicationConfigFile)
+			config := generateConfigs(tagsArg, kinesisStreamNameArg, disableCloudInitLogs)
 
 			if dryRun {
+				printableConfig := fmt.Sprintf("Main config:\n%s\nApplication config:%s", config.MainConfigFile, config.ApplicationConfigFile)
 				cmd.Print(printableConfig)
 				return
 			}
@@ -64,18 +68,20 @@ func RootCmd() *cobra.Command {
 	rootCmd.Flags().StringVar(&kinesisStreamNameArg, "kinesisStreamName", "", "Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.")
 	rootCmd.Flags().StringVar(&tagsArg, "tags", "", "Typically read from /etc/config/tags.json (see Amigo's cdk-base role here for more info), but you can override using this flag. Pass a comma-separated list of Key=Value pairs, to be included on log records.")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Set to true to print config to stdout rather than write to file.")
+	rootCmd.Flags().BoolVar(&disableCloudInitLogs, "disableCloudInitLogs", false, "Set to true to prevent shipping cloud-init logs, which include userData.")
 
 	return rootCmd
 }
 
-func generateConfigs(tagsArg string, kinesisStreamNameArg string) FluentbitConfig {
+func generateConfigs(tagsArg string, kinesisStreamNameArg string, disableCloudInitLogs bool) FluentbitConfig {
 	tags, err := getTags(jsonConfigPath, tagsArg)
 	check(err, "tags not found")
 
 	kinesisStreamName, err := getKinesisStreamName(tags, kinesisStreamNameArg)
 	check(err, "kinesis stream name not found")
 
-	systemdUnit, systemdUnitLookupError := getSystemdUnit(tags)
+	systemdUnit, systemdUnitLookupError := getTagValue(tags, "SystemdUnit")
+	_, disableCloudInitLogsTagError := getTagValue(tags, "DisableCloudInitLogs")
 
 	if systemdUnitLookupError != nil {
 		fmt.Printf("Unable to retrieve systemd unit from tags: %s\n", systemdUnitLookupError)
@@ -83,7 +89,13 @@ func generateConfigs(tagsArg string, kinesisStreamNameArg string) FluentbitConfi
 		return cloudInitOnlyConfig(kinesisStreamName, tags)
 	}
 
-	return allLogsConfig(kinesisStreamName, systemdUnit, tags)
+	if disableCloudInitLogsTagError != nil && !disableCloudInitLogs {
+		fmt.Printf("cloud-init logs are enabled. They will be shipped with application logs.")
+		return allLogsConfig(kinesisStreamName, systemdUnit, tags)
+	}
+
+	fmt.Printf("cloud-init logs are disabled (either via tag or CLI flag). Only application logs will be shipped.")
+	return applicationOnlyConfig(kinesisStreamName, systemdUnit, tags)
 }
 
 func cloudInitOnlyConfig(kinesisStreamName string, tags map[string]string) FluentbitConfig {
@@ -92,6 +104,14 @@ func cloudInitOnlyConfig(kinesisStreamName string, tags map[string]string) Fluen
 
 	return FluentbitConfig{
 		MainConfigFile: config,
+	}
+}
+
+func applicationOnlyConfig(kinesisStreamName string, systemdUnit string, tags map[string]string) FluentbitConfig {
+	applicationOnlyLogPlaceholders := map[string]string{"SYSTEMD_UNIT": systemdUnit, "APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n", "KINESIS_STREAM": kinesisStreamName}
+	applicationOnlyLogsConfig := replaceReplaceholders(applicationOnlyLogsConfig, applicationOnlyLogPlaceholders, tags)
+	return FluentbitConfig{
+		MainConfigFile: applicationOnlyLogsConfig,
 	}
 }
 
@@ -120,12 +140,12 @@ func getKinesisStreamName(tags map[string]string, kinesisStreamNameArg string) (
 	return "", fmt.Errorf("Kinesis Stream name was not found: no LogKinesisStreamName tag, and the --kinesisStreamName arg was empty.")
 }
 
-func getSystemdUnit(tags map[string]string) (string, error) {
-	name, ok := tags["SystemdUnit"]
+func getTagValue(tags map[string]string, tag string) (string, error) {
+	name, ok := tags[tag]
 	if ok {
 		return name, nil
 	}
-	return "", fmt.Errorf("SystemdUnit tag was not found")
+	return "", fmt.Errorf("%s tag was not found", tag)
 }
 
 func getTags(jsonConfigPath string, tagsArg string) (map[string]string, error) {

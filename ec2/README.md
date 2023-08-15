@@ -9,8 +9,8 @@ The `cdk-base` Amigo role uses this to provide log shipping out of the box.
 
 The following logs are supported:
 
-* [`cloud-init-output.log`](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts)
-* application logs
+- [`cloud-init-output.log`](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts)
+- application logs
 
 Use the `-h` flag for more info.
 
@@ -23,6 +23,7 @@ Usage:
   devx-logs [flags]
 
 Flags:
+      --disableCloudInitLogs       Set to true to prevent shipping cloud-init logs, which include userData.
       --dry-run                    Set to true to print config to stdout rather than write to file.
   -h, --help                       help for devx-logs
       --kinesisStreamName string   Typically configured via a 'LogKinesisStreamName' tag on the instance, but you can override using this flag. To write to Kinesis, your instance will need the following permissions for this stream: kinesis:DescribeStream, kinesis:PutRecord.
