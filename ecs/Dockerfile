@@ -1,5 +1,7 @@
 FROM amazon/aws-for-fluent-bit:init-2.32.0
 
+# Environment variables are used to specify which config files to load
+# https://github.com/aws/aws-for-fluent-bit/blob/mainline/use_cases/init-process-for-fluent-bit/README.md#how-to-use-multi-config-feature
 ENV aws_fluent_bit_init_file_1 /guardian.conf
 ENV aws_fluent_bit_init_file_2 /guardian-parsers.conf
 
