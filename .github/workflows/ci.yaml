@@ -11,6 +11,18 @@ on:
       - main
 
 jobs:
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - name: lint + compile
+        working-directory: cli
+        run: |
+          deno fmt --check
+          deno task compile
   test:
     runs-on: ubuntu-latest
     steps:
