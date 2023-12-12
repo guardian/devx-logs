@@ -31,3 +31,25 @@ See all options via the `--help` flag:
 ```bash
 devx-logs --help
 ```
+
+## Releasing
+
+Releasing is semi-automated. To release a new version, create a new tag with the
+`cli-v` prefix:
+
+```bash
+git tag cli-v0.0.1
+```
+
+And then push the tag:
+
+```bash
+git push --tags
+```
+
+This will trigger [a GitHub Action](../.github/workflows/release-cli.yml),
+publishing a new version to GitHub releases.
+
+Once a new release is available, update the
+[Homebrew formula](https://github.com/guardian/homebrew-devtools/blob/main/Formula/devx-logs.rb)
+to point to the new version.
