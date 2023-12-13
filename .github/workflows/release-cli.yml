@@ -18,10 +18,11 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
-      - name: lint + compile
+      - name: lint, test, compile
         working-directory: cli
         run: |
           deno fmt --check
+          deno test
           deno task compile
       - name: release
         working-directory: cli/dist

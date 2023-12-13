@@ -1,35 +1,8 @@
 import type { Args } from "https://deno.land/std@0.200.0/flags/mod.ts";
 import { parse } from "https://deno.land/std@0.200.0/flags/mod.ts";
 import { open } from "https://deno.land/x/open@v0.0.6/index.ts";
-
-export function getLink(
-  space: string,
-  filters: Record<string, string>,
-  columns: string[],
-): string {
-  const kibanaFilters = Object.entries(filters).map(([key, value]) => {
-    return `(query:(match_phrase:(${key}:'${value}')))`;
-  });
-
-  // The `#/` at the end is important for Kibana to correctly parse the query string
-  // The `URL` object moves this to the end of the string, which breaks the link.
-  const base = `https://logs.gutools.co.uk/s/${space}/app/discover#/`;
-
-  const query = {
-    ...(kibanaFilters.length > 0 && {
-      _g: `(filters:!(${kibanaFilters.join(",")}))`,
-    }),
-    ...(columns.length > 0 && {
-      _a: `(columns:!(${columns.join(",")}))`,
-    }),
-  };
-
-  const queryString = Object.entries(query)
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
-
-  return `${base}?${queryString}`;
-}
+import { getLink } from "./elk.ts";
+import { parseFilters, removeUndefined } from "./transform.ts";
 
 function parseArguments(args: string[]): Args {
   return parse(args, {
@@ -46,29 +19,6 @@ function parseArguments(args: string[]): Args {
       filter: [],
     },
   });
-}
-
-function escapeColon(str: string): string {
-  return str.includes(":") ? `'${str}'` : str;
-}
-
-function parseFilters(filter: string[]): Record<string, string> {
-  return filter.reduce((acc, curr) => {
-    const [key, value] = curr.split("=");
-    return { ...acc, [escapeColon(key)]: value };
-  }, {});
-}
-
-function removeUndefined(
-  obj: Record<string, string | undefined>,
-): Record<string, string> {
-  return Object.entries(obj).filter(([, value]) => !!value).reduce(
-    (acc, [key, value]) => ({
-      ...acc,
-      [key]: value,
-    }),
-    {},
-  );
 }
 
 function printHelp(): void {
@@ -114,7 +64,7 @@ async function main(inputArgs: string[]) {
   };
 
   const filters = removeUndefined(mergedFilters);
-  const link = getLink(space, filters, column.map(escapeColon));
+  const link = getLink(space, filters, column);
 
   console.log(link);
 
