@@ -2,9 +2,15 @@
 
 A small tool to deep-link to Central ELK.
 
-## Installation
+## Installation via homebrew
 
-TODO.
+```bash
+brew tap guardian/homebrew-devtools
+brew install guardian/devtools/devx-logs
+
+# update
+brew upgrade devx-logs
+```
 
 ## Usage
 
