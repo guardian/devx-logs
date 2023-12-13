@@ -6,7 +6,7 @@ import { getLink } from "./elk.ts";
 Deno.test("getLink with simple input", () => {
   const got = getLink("devx", { app: "riff-raff", stage: "PROD" });
   const want =
-    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:(app:'riff-raff'))),(query:(match_phrase:(stage:'PROD')))))";
+    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('app':'riff-raff'))),(query:(match_phrase:('stage':'PROD')))))";
   assertEquals(got, want);
 });
 
@@ -16,7 +16,7 @@ Deno.test("getLink with columns", () => {
     "level",
   ]);
   const want =
-    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:(app:'riff-raff'))),(query:(match_phrase:(stage:'PROD')))))&_a=(columns:!(message,level))";
+    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('app':'riff-raff'))),(query:(match_phrase:('stage':'PROD')))))&_a=(columns:!('message','level'))";
   assertEquals(got, want);
 });
 
@@ -30,6 +30,6 @@ Deno.test("getLink with colon(:) input", () => {
     stage: "PROD",
   }, ["message", "gu:repo"]);
   const want =
-    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('gu:repo.keyword':'guardian/amigo'))),(query:(match_phrase:(stage:'PROD')))))&_a=(columns:!(message,'gu:repo'))";
+    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('gu:repo.keyword':'guardian/amigo'))),(query:(match_phrase:('stage':'PROD')))))&_a=(columns:!('message','gu:repo'))";
   assertEquals(got, want);
 });

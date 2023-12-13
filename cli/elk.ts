@@ -1,13 +1,17 @@
-function escapeColon(str: string): string {
-  return str.includes(":") ? `'${str}'` : str;
+/**
+ * Wrap a string in single quotes so Kibana can parse it correctly
+ */
+function wrapString(str: string): string {
+  return `'${str}'`;
 }
+
 export function getLink(
   space: string,
   filters: Record<string, string>,
   columns: string[] = [],
 ): string {
   const kibanaFilters = Object.entries(filters).map(([key, value]) => {
-    return `(query:(match_phrase:(${escapeColon(key)}:'${value}')))`;
+    return `(query:(match_phrase:(${wrapString(key)}:${wrapString(value)})))`;
   });
 
   // The `#/` at the end is important for Kibana to correctly parse the query string
@@ -19,7 +23,7 @@ export function getLink(
       _g: `(filters:!(${kibanaFilters.join(",")}))`,
     }),
     ...(columns.length > 0 && {
-      _a: `(columns:!(${columns.map(escapeColon).join(",")}))`,
+      _a: `(columns:!(${columns.map(wrapString).join(",")}))`,
     }),
   };
 
