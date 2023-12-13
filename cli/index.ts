@@ -1,6 +1,5 @@
 import type { Args } from "https://deno.land/std@0.200.0/flags/mod.ts";
 import { parse } from "https://deno.land/std@0.200.0/flags/mod.ts";
-import { open } from "https://deno.land/x/open@v0.0.6/index.ts";
 import { getLink } from "./elk.ts";
 import { parseFilters, removeUndefined } from "./transform.ts";
 
@@ -46,7 +45,7 @@ function printHelp(): void {
   );
 }
 
-async function main(inputArgs: string[]) {
+function main(inputArgs: string[]) {
   const args = parseArguments(inputArgs);
 
   if (args.help) {
@@ -69,8 +68,8 @@ async function main(inputArgs: string[]) {
   console.log(link);
 
   if (follow) {
-    await open(link);
+    new Deno.Command("open", { args: [link] }).spawn();
   }
 }
 
-await main(Deno.args);
+main(Deno.args);
