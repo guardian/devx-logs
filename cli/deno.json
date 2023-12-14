@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "compile": "deno compile --allow-run=open --target aarch64-apple-darwin --output dist/devx-logs index.ts",
-    "demo": "deno run --allow-run=open index.ts --space devx --stack deploy --stage PROD --app riff-raff"
+    "compile": "deno compile --allow-run=open --target aarch64-apple-darwin --output dist/devx-logs main.ts",
+    "demo": "deno run --allow-run=open main.ts --space devx --stack deploy --stage PROD --app riff-raff"
   }
 }
