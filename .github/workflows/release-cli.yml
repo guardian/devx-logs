@@ -1,0 +1,33 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - cli-v*
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - name: lint, test, compile
+        working-directory: cli
+        run: |
+          deno fmt --check
+          deno test
+          deno task compile
+      - name: release
+        working-directory: cli/dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sha256sum devx-logs > checksum.txt
+          gh release create ${{ github.ref }} * --generate-notes
