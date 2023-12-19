@@ -40,3 +40,13 @@ Deno.test("removeUndefined", () => {
   };
   assertEquals(got, want);
 });
+
+Deno.test("removeUndefined where the RHS is 0", () => {
+  const got = removeUndefined({
+    errors: "0",
+  });
+  const want = {
+    errors: "0",
+  };
+  assertEquals(got, want);
+});
