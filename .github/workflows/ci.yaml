@@ -41,9 +41,10 @@ jobs:
 
     # See https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
-      # required by aws-actions/configure-aws-credentials
+      # required by guardian/actions-riff-raff@v4
       id-token: write
       contents: read
+      pull-requests: write # required since guardian/actions-riff-raff@v3
 
     steps:
       - uses: actions/checkout@v3
@@ -57,13 +58,11 @@ jobs:
           GOOS=linux GOARCH=arm64 go build -o $BINARY_NAME-arm64 main.go
           GOOS=linux GOARCH=amd64 go build -o $BINARY_NAME-amd64 main.go
 
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.GU_RIFF_RAFF_ROLE_ARN }}
-          aws-region: eu-west-1
-      - uses: guardian/actions-riff-raff@v2
+      - uses: guardian/actions-riff-raff@v4
         with:
           app: devx-logs
+          roleArn: ${{ secrets.GU_RIFF_RAFF_ROLE_ARN }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
           contentDirectories: |
             devx-logs:
               - ec2/${{ env.BINARY_NAME }}-arm64
