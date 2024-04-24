@@ -14,3 +14,5 @@ ENV aws_fluent_bit_init_file_3 /guardian.conf
 
 ADD guardian-parsers.conf /guardian-parsers.conf
 ADD guardian.conf /guardian.conf
+
+VOLUME [ "/init" ]
