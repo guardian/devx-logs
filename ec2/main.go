@@ -23,8 +23,8 @@ var fluentbitConfig string
 var applicationLogsConfig string
 
 const jsonConfigPath = "/etc/config/tags.json"
-const applicationLogsConfigPath = "/etc/td-agent-bit/application-logs.conf"
-const fluentbitConfigPath = "/etc/td-agent-bit/td-agent-bit.conf"
+const applicationLogsConfigPath = "/etc/fluent-bit/application-logs.conf"
+const fluentbitConfigPath = "/etc/fluent-bit/fluent-bit.conf"
 
 func main() {
 	rootCmd := RootCmd()
