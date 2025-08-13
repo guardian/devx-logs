@@ -7,8 +7,8 @@ function parseArguments(args: string[]): Args {
   return parse(args, {
     boolean: ["follow"],
     negatable: ["follow"],
-    string: ["space", "stack", "stage", "app"],
-    collect: ["column", "filter"],
+    string: ["space", "stack", "stage"],
+    collect: ["app", "column", "filter"],
     stopEarly: false,
     "--": true,
     default: {
@@ -59,11 +59,10 @@ function main(inputArgs: string[]) {
     ...parseFilters(filter),
     "stack.keyword": stack,
     "stage.keyword": stage,
-    "app.keyword": app,
   };
 
   const filters = removeUndefined(mergedFilters);
-  const link = getLink(space, filters, column);
+  const link = getLink(space, app, filters, column);
 
   console.log(link);
 
