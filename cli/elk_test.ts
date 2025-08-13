@@ -4,19 +4,19 @@ import { getLink } from "./elk.ts";
 // NOTE: Each of these URLs should be opened in a browser to verify that they work as expected.
 
 Deno.test("getLink with simple input", () => {
-  const got = getLink("devx", { app: "riff-raff", stage: "PROD" });
+  const got = getLink("devx", ["riff-raff"], { stage: "PROD" });
   const want =
-    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('app':'riff-raff'))),(query:(match_phrase:('stage':'PROD')))))";
+    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((meta:(field:'app.keyword',key:'app.keyword',params:!('riff-raff'),type:phrases,value:!('riff-raff')),query:(bool:(minimum_should_match:1,should:!((match_phrase:('app.keyword':'riff-raff')))))),(query:(match_phrase:('stage':'PROD')))))";
   assertEquals(got, want);
 });
 
 Deno.test("getLink with columns", () => {
-  const got = getLink("devx", { app: "riff-raff", stage: "PROD" }, [
+  const got = getLink("devx", ["riff-raff"], { stage: "PROD" }, [
     "message",
     "level",
   ]);
   const want =
-    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('app':'riff-raff'))),(query:(match_phrase:('stage':'PROD')))))&_a=(columns:!('message','level'))";
+    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((meta:(field:'app.keyword',key:'app.keyword',params:!('riff-raff'),type:phrases,value:!('riff-raff')),query:(bool:(minimum_should_match:1,should:!((match_phrase:('app.keyword':'riff-raff')))))),(query:(match_phrase:('stage':'PROD')))))&_a=(columns:!('message','level'))";
   assertEquals(got, want);
 });
 
@@ -25,11 +25,21 @@ Filters and columns with colon(:) input should get wrapped in single quotes(') s
 That is, gu:repo should become 'gu:repo'.
  */
 Deno.test("getLink with colon(:) input", () => {
-  const got = getLink("devx", {
+  const got = getLink("devx", [], {
     "gu:repo.keyword": "guardian/amigo",
     stage: "PROD",
   }, ["message", "gu:repo"]);
   const want =
     "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((query:(match_phrase:('gu:repo.keyword':'guardian/amigo'))),(query:(match_phrase:('stage':'PROD')))))&_a=(columns:!('message','gu:repo'))";
+  assertEquals(got, want);
+});
+
+Deno.test("getLink for multiple apps", () => {
+  const got = getLink("devx", ["amigo", "prism"], { stage: "PROD" }, [
+    "app",
+    "message",
+  ]);
+  const want =
+    "https://logs.gutools.co.uk/s/devx/app/discover#/?_g=(filters:!((meta:(field:'app.keyword',key:'app.keyword',params:!('amigo','prism'),type:phrases,value:!('amigo','prism')),query:(bool:(minimum_should_match:1,should:!((match_phrase:('app.keyword':'amigo')),(match_phrase:('app.keyword':'prism')))))),(query:(match_phrase:('stage':'PROD')))))&_a=(columns:!('app','message'))";
   assertEquals(got, want);
 });

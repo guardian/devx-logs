@@ -18,6 +18,10 @@ brew upgrade devx-logs
   ```bash
   devx-logs --space devx --stage PROD --app riff-raff
   ```
+- Open the logs for Riff-Raff or Prism in PROD
+  ```bash
+  devx-logs --space devx --stage PROD --app riff-raff --app prism
+  ```
 - Display the URL for logs from Riff-Raff in PROD
   ```bash
   devx-logs --space devx --stage PROD --app riff-raff --no-follow
