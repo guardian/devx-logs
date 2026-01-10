@@ -2,7 +2,7 @@
 
 A tool to help forward logs of a Systemd Unit to Kinesis. The output
 is a [Fluentbit](https://docs.fluentbit.io/manual/) config written to
-`/etc/td-agent-bit/td-agent-bit.conf`. Use the `dry-run` flag to write to stdout
+`/etc/fluent-bit/fluent-bit.conf`. Use the `dry-run` flag to write to stdout
 instead.
 
 The `cdk-base` Amigo role uses this to provide log shipping out of the box.
