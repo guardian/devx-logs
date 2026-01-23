@@ -14,6 +14,7 @@ import (
 type FluentbitConfig struct {
 	MainConfigFile        string
 	ApplicationConfigFile string
+	SystemdLogsConfigFile string
 }
 
 //go:embed fluentbit/fluentbit.conf
@@ -22,8 +23,12 @@ var fluentbitConfig string
 //go:embed fluentbit/application-logs.conf
 var applicationLogsConfig string
 
+//go:embed fluentbit/systemd-logs.conf
+var systemdLogsConfig string
+
 const jsonConfigPath = "/etc/config/tags.json"
 const applicationLogsConfigPath = "/etc/td-agent-bit/application-logs.conf"
+const systemdLogsConfigPath = "/etc/td-agent-bit/systemd-logs.conf"
 const fluentbitConfigPath = "/etc/td-agent-bit/td-agent-bit.conf"
 
 func main() {
@@ -57,6 +62,9 @@ func RootCmd() *cobra.Command {
 
 			err = os.WriteFile(applicationLogsConfigPath, []byte(config.ApplicationConfigFile), 0644)
 			check(err, fmt.Sprintf("unable to write config file to %s: %v", applicationLogsConfigPath, err))
+
+			err = os.WriteFile(systemdLogsConfigPath, []byte(config.SystemdLogsConfigFile), 0644)
+			check(err, fmt.Sprintf("unable to write config file to %s: %v", systemdLogsConfigPath, err))
 
 		},
 	}
@@ -96,14 +104,26 @@ func cloudInitOnlyConfig(kinesisStreamName string, tags map[string]string) Fluen
 }
 
 func allLogsConfig(kinesisStreamName string, systemdUnit string, tags map[string]string) FluentbitConfig {
-	fluentbitConfigPlaceholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n"}
-	fluentbitConfig := replaceReplaceholders(fluentbitConfig, fluentbitConfigPlaceholders, tags)
-	applicationLogPlaceholders := map[string]string{"SYSTEMD_UNIT": systemdUnit}
-	applicationLogsConfig := replaceReplaceholders(applicationLogsConfig, applicationLogPlaceholders, tags)
+	systemdUnitName := strings.TrimSuffix(systemdUnit, ".service")
+
+	mainConfig := replaceReplaceholders(fluentbitConfig, map[string]string{
+		"KINESIS_STREAM":   kinesisStreamName,
+		"APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n@INCLUDE systemd-logs.conf\n",
+	}, tags)
+
+	appConfig := replaceReplaceholders(applicationLogsConfig, map[string]string{
+		"SYSTEMD_UNIT": systemdUnit,
+	}, tags)
+
+	systemdConfig := replaceReplaceholders(systemdLogsConfig, map[string]string{
+		"SYSTEMD_UNIT":      systemdUnit,
+		"SYSTEMD_UNIT_NAME": systemdUnitName,
+	}, tags)
 
 	return FluentbitConfig{
-		MainConfigFile:        fluentbitConfig,
-		ApplicationConfigFile: applicationLogsConfig,
+		MainConfigFile:        mainConfig,
+		ApplicationConfigFile: appConfig,
+		SystemdLogsConfigFile: systemdConfig,
 	}
 }
 
