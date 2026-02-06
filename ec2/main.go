@@ -106,24 +106,17 @@ func cloudInitOnlyConfig(kinesisStreamName string, tags map[string]string) Fluen
 func allLogsConfig(kinesisStreamName string, systemdUnit string, tags map[string]string) FluentbitConfig {
 	systemdUnitName := strings.TrimSuffix(systemdUnit, ".service")
 
-	mainConfig := replaceReplaceholders(fluentbitConfig, map[string]string{
-		"KINESIS_STREAM":   kinesisStreamName,
-		"APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n@INCLUDE systemd-logs.conf\n",
-	}, tags)
-
-	appConfig := replaceReplaceholders(applicationLogsConfig, map[string]string{
-		"SYSTEMD_UNIT": systemdUnit,
-	}, tags)
-
-	systemdConfig := replaceReplaceholders(systemdLogsConfig, map[string]string{
-		"SYSTEMD_UNIT":      systemdUnit,
-		"SYSTEMD_UNIT_NAME": systemdUnitName,
-	}, tags)
+	fluentbitConfigPlaceholders := map[string]string{"KINESIS_STREAM": kinesisStreamName, "APPLICATION_LOGS": "\n@INCLUDE application-logs.conf\n@INCLUDE systemd-logs.conf\n"}
+	fluentbitConfig := replaceReplaceholders(fluentbitConfig, fluentbitConfigPlaceholders, tags)
+	applicationLogPlaceholders := map[string]string{"SYSTEMD_UNIT": systemdUnit}
+	applicationLogsConfig := replaceReplaceholders(applicationLogsConfig, applicationLogPlaceholders, tags)
+	systemdLogPlaceholders := map[string]string{"SYSTEMD_UNIT": systemdUnit, "SYSTEMD_UNIT_NAME": systemdUnitName}
+	systemdLogsConfig := replaceReplaceholders(systemdLogsConfig, systemdLogPlaceholders, tags)
 
 	return FluentbitConfig{
-		MainConfigFile:        mainConfig,
-		ApplicationConfigFile: appConfig,
-		SystemdLogsConfigFile: systemdConfig,
+		MainConfigFile:        fluentbitConfig,
+		ApplicationConfigFile: applicationLogsConfig,
+		SystemdLogsConfigFile: systemdLogsConfig,
 	}
 }
 
