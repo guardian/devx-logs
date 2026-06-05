@@ -1,6 +1,6 @@
 module github.com/guardian/devx-logs
 
-go 1.17
+go 1.26.4
 
 require (
 	github.com/kylelemons/godebug v1.1.0
