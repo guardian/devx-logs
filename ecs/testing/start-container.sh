@@ -7,5 +7,6 @@ docker run --rm -i \
     -e APP=test-app\
     -e GU_REPO=GU_REPO\
     -e TASK_NAME=TASK_NAME\
+    -e OUTPUT_PLUGIN=stdout\
     -p 24224:24224 \
     $(docker build -q .. )
