@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -102,12 +104,28 @@ func TestFluentBit(t *testing.T) {
 
 	address := net.JoinHostPort(host, port.Port())
 
-	sendForwardRecord(t, address)
+	messageID := uuid.NewString()
+	message := fmt.Sprintf(`{"hello":"%s","test":true}`, messageID)
 
-	requireOutput(t, consumer, `"hello":"world"`)
+	sendForwardRecord(t, address, message)
+
+	requireOutput(
+		t,
+		consumer,
+		messageID,
+		`"ecs_cluster"=>"test-cluster"`,
+		`"ecs_task_arn"=>"test-task-arn"`,
+		`"ecs_task_definition"=>"test-task-definition"`,
+		`"ShippedBy"=>"devx-logs"`,
+		`"stack"=>"test"`,
+		`"stage"=>"test"`,
+		`"app"=>"test"`,
+		`"gu:repo"=>"test/repo"`,
+		`"task"=>"test-task"`,
+	)
 }
 
-func sendForwardRecord(t *testing.T, address string) {
+func sendForwardRecord(t *testing.T, address string, message string) {
 	t.Helper()
 
 	record := []interface{}{
@@ -116,7 +134,7 @@ func sendForwardRecord(t *testing.T, address string) {
 			[]interface{}{
 				time.Now().Unix(),
 				map[string]interface{}{
-					"MESSAGE": `{"hello":"world","test":true}`,
+					"MESSAGE": message,
 				},
 			},
 		},
@@ -138,13 +156,24 @@ func sendForwardRecord(t *testing.T, address string) {
 	}
 }
 
-func requireOutput(t *testing.T, consumer *logConsumer, expected string) {
+func requireOutput(t *testing.T, consumer *logConsumer, expected ...string) {
 	t.Helper()
 
 	deadline := time.Now().Add(5 * time.Second)
 
 	for time.Now().Before(deadline) {
-		if strings.Contains(consumer.String(), expected) {
+		output := consumer.String()
+
+		allFound := true
+
+		for _, value := range expected {
+			if !strings.Contains(output, value) {
+				allFound = false
+				break
+			}
+		}
+
+		if allFound {
 			return
 		}
 
@@ -152,7 +181,7 @@ func requireOutput(t *testing.T, consumer *logConsumer, expected string) {
 	}
 
 	t.Fatalf(
-		"did not find %q in Fluent Bit output:\n%s",
+		"did not find all expected values %q in Fluent Bit output:\n%s",
 		expected,
 		consumer.String(),
 	)
