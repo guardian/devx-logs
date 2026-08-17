@@ -24,7 +24,7 @@ jobs:
           deno fmt --check
           deno test
           deno task compile
-  test:
+  test-ec2:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -35,9 +35,20 @@ jobs:
       - name: Run tests
         working-directory: ec2
         run: go test .
+  test-ecs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ecs/go.mod
+      - name: Run tests
+        working-directory: ecs
+        run: go test .
   upload:
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test-ec2, test-ecs]
 
     # See https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
