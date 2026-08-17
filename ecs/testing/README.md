@@ -8,7 +8,7 @@ deploy to AWS, and also show how the process is wired up.
 
 The container listens on port 24224, for messages in the webpack format.
 
-The container can be started locally by running the start-container.sh script from this directory.
+The container can be started locally by running the `start-container.sh` script from this directory.
 It will build the image and run it, and you can then send messages to it using the `send-message.sh` script.
 
 In normal operation, the process sends messages to an AWS Kinesis stream, which is then read by a Lambda function and 
