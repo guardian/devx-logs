@@ -11,7 +11,7 @@ on:
       - main
 
 jobs:
-  cli:
+  test-cli:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,9 +46,14 @@ jobs:
       - name: Run tests
         working-directory: ecs
         run: go test .
+  test:
+    runs-on: ubuntu-latest
+    needs: [ test-cli, test-ec2, test-ecs ]
+    steps:
+      - run: echo "All tests passed"
   upload:
     runs-on: ubuntu-latest
-    needs: [test-ec2, test-ecs]
+    needs: [test]
 
     # See https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
