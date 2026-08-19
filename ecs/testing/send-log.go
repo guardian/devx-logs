@@ -1,60 +1,28 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"log"
-	"net"
+	"path/filepath"
 	"os"
-	"time"
-
-	"github.com/vmihailenco/msgpack/v5"
+	"os/exec"
+	"runtime"
 )
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:24224", "Fluent Bit forward address")
-	field := flag.String("field", "message", "Field name for the log message (e.g. message or MESSAGE)")
-	flag.Parse()
+	args := append([]string{"run", ".."}, os.Args[1:]...)
+	cmd := exec.Command("go", args...)
+	_, file, _, ok := runtime.Caller(0)
+	if ok {
+		cmd.Dir = filepath.Dir(filepath.Dir(file))
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
-	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "usage: send-log [--addr host:port] [--field name] <message>")
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
+
 		os.Exit(1)
 	}
-
-	message := flag.Arg(0)
-
-	if err := sendForwardMessage(*addr, *field, message); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func sendForwardMessage(address, fieldName, message string) error {
-	record := []interface{}{
-		"application-logs",
-		[]interface{}{
-			[]interface{}{
-				time.Now().Unix(),
-				map[string]interface{}{
-					fieldName: message,
-				},
-			},
-		},
-	}
-
-	payload, err := msgpack.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("encoding Forward record: %w", err)
-	}
-
-	conn, err := net.DialTimeout("tcp", address, 5*time.Second)
-	if err != nil {
-		return fmt.Errorf("connecting to Fluent Bit: %w", err)
-	}
-	defer conn.Close()
-
-	if _, err := conn.Write(payload); err != nil {
-		return fmt.Errorf("sending Forward record: %w", err)
-	}
-
-	return nil
 }
