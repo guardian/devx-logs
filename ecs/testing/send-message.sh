@@ -1,3 +1,4 @@
 #!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
 MESSAGE="${1:-testing}"
-go run send-log.go --field log "{\"hello\":\"$MESSAGE\",\"test\":true}"
+go run "$DIR/.." --field log "{\"hello\":\"$MESSAGE\",\"test\":true}"
