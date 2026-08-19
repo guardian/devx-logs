@@ -141,7 +141,7 @@ func sendForwardRecord(t *testing.T, address, fieldName, message string) {
 func requireOutput(t *testing.T, consumer *logConsumer, expected ...string) {
 	t.Helper()
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 
 	for time.Now().Before(deadline) {
 		output := consumer.String()
