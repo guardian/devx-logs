@@ -1,14 +1,32 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func main() {}
+func main() {
+	addr := flag.String("addr", "127.0.0.1:24224", "Fluent Bit forward address")
+	field := flag.String("field", "message", "Field name for the log message (e.g. message or MESSAGE)")
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		fmt.Fprintln(os.Stderr, "usage: send-log [--addr host:port] [--field name] <message>")
+		os.Exit(1)
+	}
+
+	message := flag.Arg(0)
+
+	if err := sendForwardMessage(*addr, *field, message); err != nil {
+		log.Fatal(err)
+	}
+}
 
 func sendForwardMessage(address, fieldName, message string) error {
 	record := []interface{}{

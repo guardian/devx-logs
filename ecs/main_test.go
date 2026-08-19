@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 type logConsumer struct {
@@ -104,15 +103,7 @@ func TestFluentBit(t *testing.T) {
 
 	address := net.JoinHostPort(host, port.Port())
 
-	messageID := uuid.NewString()
-	message := fmt.Sprintf(`{"hello":"%s","test":true}`, messageID)
-
-	sendForwardRecord(t, address, message)
-
-	requireOutput(
-		t,
-		consumer,
-		messageID,
+	expectedFields := []string{
 		`"ecs_cluster"=>"test-cluster"`,
 		`"ecs_task_arn"=>"test-task-arn"`,
 		`"ecs_task_definition"=>"test-task-definition"`,
@@ -122,36 +113,27 @@ func TestFluentBit(t *testing.T) {
 		`"app"=>"test"`,
 		`"gu:repo"=>"test/repo"`,
 		`"task"=>"test-task"`,
-	)
+	}
+
+	// "log" exercises the rename filter (log -> message) before JSON parsing.
+	t.Run("log field", func(t *testing.T) {
+		messageID := uuid.NewString()
+		sendForwardRecord(t, address, "log", fmt.Sprintf(`{"hello":"%s","test":true}`, messageID))
+		requireOutput(t, consumer, append([]string{messageID}, expectedFields...)...)
+	})
+
+	// "message" skips the rename and goes directly to JSON parsing.
+	t.Run("message field", func(t *testing.T) {
+		messageID := uuid.NewString()
+		sendForwardRecord(t, address, "message", fmt.Sprintf(`{"hello":"%s","test":true}`, messageID))
+		requireOutput(t, consumer, append([]string{messageID}, expectedFields...)...)
+	})
 }
 
-func sendForwardRecord(t *testing.T, address string, message string) {
+func sendForwardRecord(t *testing.T, address, fieldName, message string) {
 	t.Helper()
 
-	record := []interface{}{
-		"application-logs",
-		[]interface{}{
-			[]interface{}{
-				time.Now().Unix(),
-				map[string]interface{}{
-					"MESSAGE": message,
-				},
-			},
-		},
-	}
-
-	payload, err := msgpack.Marshal(record)
-	if err != nil {
-		t.Fatalf("encoding Forward record: %v", err)
-	}
-
-	conn, err := net.DialTimeout("tcp", address, 5*time.Second)
-	if err != nil {
-		t.Fatalf("connecting to Fluent Bit: %v", err)
-	}
-	defer conn.Close()
-
-	if _, err := conn.Write(payload); err != nil {
+	if err := sendForwardMessage(address, fieldName, message); err != nil {
 		t.Fatalf("sending Forward record: %v", err)
 	}
 }
