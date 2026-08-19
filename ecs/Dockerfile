@@ -15,7 +15,7 @@ ENV aws_fluent_bit_init_file_3=/guardian.conf
 # We duplicate output to this location which allows us to test easily.  By default, we duplicate to null, so in prod it doesn't happen at all.
 ENV OUTPUT_PLUGIN=null
 
-ADD guardian-parsers.conf /guardian-parsers.conf
-ADD guardian.conf /guardian.conf
+ADD config/guardian-parsers.conf /guardian-parsers.conf
+ADD config/guardian.conf /guardian.conf
 
 VOLUME [ "/init" ]
