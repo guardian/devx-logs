@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "quarterly"
+
+  - package-ecosystem: "npm"
+    directory: "/cli"
+    schedule:
+      interval: "quarterly"
+
+  - package-ecosystem: "gomod"
+    directories:
+      - "/ec2"
+      - "/ecs"
+    schedule:
+      interval: "quarterly"
