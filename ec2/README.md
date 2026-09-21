@@ -7,11 +7,9 @@ package's configuration file:
 * `fluent-bit`: `/etc/fluent-bit/fluent-bit.conf`
 * `td-agent-bit`: `/etc/td-agent-bit/td-agent-bit.conf`
 
-The existing main configuration file determines which layout is used. If both
-exist, `fluent-bit` takes precedence. `application-logs.conf` is written alongside
-the main file, preserving relative includes and parser paths. If neither exists,
-the command fails with an installation error. Use the `dry-run` flag to write to
-stdout without requiring either package to be installed.
+The app checks which of the above paths exists already (from the initial fluent-bit install). If both
+exist, `fluent-bit` takes precedence. If neither exists, the command fails with an installation error. 
+Use the `dry-run` flag to write to stdout without requiring either package to be installed.
 
 The `cdk-base` Amigo role uses this to provide log shipping out of the box.
 
@@ -40,8 +38,3 @@ Flags:
 # Deployment
 
 This tools deploys via Riff-Raff whenever a PR is merged into `main`.
-
-Deploy this layout-detecting version before removing Amigo's `cdk-base`
-compatibility links from newly baked images. It also supports existing images
-using the legacy package or compatibility links. Service startup remains the
-responsibility of `cdk-base` or the instance's user data.
