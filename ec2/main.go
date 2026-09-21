@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -23,8 +24,6 @@ var fluentbitConfig string
 var applicationLogsConfig string
 
 const jsonConfigPath = "/etc/config/tags.json"
-const applicationLogsConfigPath = "/etc/td-agent-bit/application-logs.conf"
-const fluentbitConfigPath = "/etc/td-agent-bit/td-agent-bit.conf"
 
 func main() {
 	rootCmd := RootCmd()
@@ -43,21 +42,16 @@ func RootCmd() *cobra.Command {
 		Use:   "devx-logs",
 		Short: "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.",
 		Long:  "devx-logs outputs a Fluentbit config appropriate for Guardian EC2 applications.\n\nConfiguration is typically provided by tags on the instance, but flags are also supported to customise behaviour.",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			config := generateConfigs(tagsArg, kinesisStreamNameArg)
 			printableConfig := fmt.Sprintf("Main config:\n%s\nApplication config:%s", config.MainConfigFile, config.ApplicationConfigFile)
 
 			if dryRun {
 				cmd.Print(printableConfig)
-				return
+				return nil
 			}
 
-			err := os.WriteFile(fluentbitConfigPath, []byte(config.MainConfigFile), 0644)
-			check(err, fmt.Sprintf("unable to write config file to %s: %v", fluentbitConfigPath, err))
-
-			err = os.WriteFile(applicationLogsConfigPath, []byte(config.ApplicationConfigFile), 0644)
-			check(err, fmt.Sprintf("unable to write config file to %s: %v", applicationLogsConfigPath, err))
-
+			return writeConfigs(config, "/etc")
 		},
 	}
 
@@ -66,6 +60,34 @@ func RootCmd() *cobra.Command {
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Set to true to print config to stdout rather than write to file.")
 
 	return rootCmd
+}
+
+// Prefer the modern package if both layouts exist. Inspect the package's main
+// config file rather than creating a directory that no installed service reads.
+func writeConfigs(config FluentbitConfig, configRoot string) error {
+	for _, relativePath := range []string{"fluent-bit/fluent-bit.conf", "td-agent-bit/td-agent-bit.conf"} {
+		mainPath := filepath.Join(configRoot, relativePath)
+		info, err := os.Stat(mainPath)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("unable to inspect config file %s: %w", mainPath, err)
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("config path %s is not a regular file", mainPath)
+		}
+
+		applicationPath := filepath.Join(filepath.Dir(mainPath), "application-logs.conf")
+		if err := os.WriteFile(applicationPath, []byte(config.ApplicationConfigFile), 0644); err != nil {
+			return fmt.Errorf("unable to write config file %s: %w", applicationPath, err)
+		}
+		if err := os.WriteFile(mainPath, []byte(config.MainConfigFile), 0644); err != nil {
+			return fmt.Errorf("unable to write config file %s: %w", mainPath, err)
+		}
+		return nil
+	}
+	return fmt.Errorf("no Fluent Bit configuration found under %s; install fluent-bit or td-agent-bit first", configRoot)
 }
 
 func generateConfigs(tagsArg string, kinesisStreamNameArg string) FluentbitConfig {
