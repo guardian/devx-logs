@@ -49,3 +49,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Publish image to ECR
+        uses: guardian/actions-ecr/push@v1.0.1
+        with:
+          app: devx-logs
+          roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
