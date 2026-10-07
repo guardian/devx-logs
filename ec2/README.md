@@ -1,9 +1,15 @@
 # devx-logs (for EC2)
 
 A tool to help forward logs of a Systemd Unit to Kinesis. The output
-is a [Fluentbit](https://docs.fluentbit.io/manual/) config written to
-`/etc/td-agent-bit/td-agent-bit.conf`. Use the `dry-run` flag to write to stdout
-instead.
+is a [Fluentbit](https://docs.fluentbit.io/manual/) config written to the installed
+package's configuration file:
+
+* `fluent-bit`: `/etc/fluent-bit/fluent-bit.conf`
+* `td-agent-bit`: `/etc/td-agent-bit/td-agent-bit.conf`
+
+The app checks which of the above paths exists already (from the initial fluent-bit install). If both
+exist, `fluent-bit` takes precedence. If neither exists, the command fails with an installation error. 
+Use the `dry-run` flag to write to stdout without requiring either package to be installed.
 
 The `cdk-base` Amigo role uses this to provide log shipping out of the box.
 
