@@ -19,10 +19,21 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v5
+        with:
+          daemon-config: |
+            {
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -41,6 +52,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push Docker image
+        id: build-and-push
         uses: docker/build-push-action@v7
         with:
           context: ecs
@@ -48,3 +60,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and tag Docker image for ECR
+        run: docker buildx build --load -t devx-logs:latest ecs
+      
+      - name: Publish image to ECR
+        uses: guardian/actions-ecr/push@v1.0.1
+        with:
+          app: devx-logs
+          roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
